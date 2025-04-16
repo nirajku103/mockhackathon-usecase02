@@ -1,0 +1,93 @@
+name: Terraform Plan
+
+on:
+  push:
+    branches:
+      - test
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures we get all history
+
+      - name: Prevent CI Loop
+        run: |
+          if [[ "$(git log -1 --pretty=%an)" == "GitHub Actions" ]]; then
+            echo "Commit is from GitHub Actions. Exiting to prevent loop."
+            exit 0
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          run: aws sts get-caller-identity
+
+      - name: Initialize Terraform
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Generate Terraform Plan
+        run: |
+          cd terraform
+          terraform plan -var-file="dev.tfvars" -out=tfplan
+
+      -name: Terraform apply
+        run: |
+          cd terraform
+          terraform apply -var-file="dev.tfvars" -out=tfplan
+
+      - name: Save Terraform Plan File
+        run: |
+          cd terraform
+          terraform show -no-color tfplan > terraform-plan.md
+          rm -rf tfplan
+
+      # - name: Create or Switch to 'test' Branch
+      #   run: |
+      #     git config --global user.email "github-actions@example.com"
+      #     git config --global user.name "GitHub Actions"
+      #     git checkout test
+      #     git add terraform/terraform-plan.md
+      #     git commit -m "Add Terraform plan [skip ci]"
+      #     git push origin test --force
+
+      - name: Read Terraform Plan File
+        id: read_plan
+        run: |
+          PLAN_CONTENT=$(cat terraform/terraform-plan.md)
+          echo "plan_content<<EOF" >> $GITHUB_ENV
+          echo "$PLAN_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Pull Request to main
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: test
+          base: main
+          title: "Terraform Plan Reviews"
+          body: |
+            ## Terraform Plan
+            THE following changes are proposed by this Terraform plan:
+            ```diff
+            ${{ env.plan_content }}
+            ```
+          labels: terraform, plan

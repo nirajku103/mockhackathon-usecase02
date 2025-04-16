@@ -16,15 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Ensures we get all history
-
-      - name: Prevent CI Loop
-        run: |
-          if [[ "$(git log -1 --pretty=%an)" == "GitHub Actions" ]]; then
-            echo "Commit is from GitHub Actions. Exiting to prevent loop."
-            exit 0
-          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2

@@ -9,8 +9,8 @@ variable "subnets" {
   type        = list(string)
 }
 
-variable "alb_target_group_arns" {
-  description = "The ARNs of the ALB target groups"
+variable "alb_target_group_arn" {
+  description = "The ARN of the ALB target groups"
   type        = list(string)
 }
 

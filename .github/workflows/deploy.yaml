@@ -38,10 +38,6 @@ jobs:
         run: |
           cd terraform
           terraform plan -var-file="dev.tfvars" -out=tfplan
-
-      - name: Terraform Apply
-        run: |
-          cd terraform
           terraform apply -var-file="dev.tfvars" -out=tfplan
 
       - name: Save Terraform Plan File

@@ -1,50 +1,67 @@
+
+# OIDC Provider for GitHub
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    "74f3a68f16524f15424927704c9506f55a9316bd" # GitHub's OIDC thumbprint
+  ]
+}
+
+# IAM Role for GitHub Actions
+resource "aws_iam_role" "github_actions_role" {
+  name = "github-actions-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        }
+        Condition = {
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" : "repo:nirajku103/mockhackathon-usecase01:ref:refs/heads/*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Attach Policies to the IAM Role
+resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_terraform" {
+  role       = aws_iam_role.github_actions_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess" # Adjust this to least privilege
+}
+
 module "vpc" {
   source = "./modules/vpc"
-  vpc_cidr = var.vpc_cidr
-  public_subnet_cidrs = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  availability_zones = var.availability_zones
-}
-
-module "sg" {
-  source = "./modules/sg"
-  name = var.sg_name
-  description = var.sg_description
-  vpc_id = module.vpc.vpc_id
-  ingress_from_port = var.sg_ingress_from_port
-  ingress_to_port = var.sg_ingress_to_port
-  ingress_protocol = var.sg_ingress_protocol
-  ingress_cidr_blocks = var.sg_ingress_cidr_blocks
-}
-
-/*
-module "ec2" {
-  source = "./modules/ec2"
-  ami_id = var.ec2_ami_id
-  instance_type = var.ec2_instance_type
-  subnet_ids = module.vpc.public_subnet_ids
-  security_group_ids = [module.sg.security_group_id]
-}
-*/
-module "asg" {
-  source = "./modules/asg"
-  name = var.asg_name
-  ami_id = var.ec2_ami_id
-  instance_type = var.ec2_instance_type
-  subnet_ids = module.vpc.public_subnet_ids
-  security_group_ids = [module.sg.security_group_id]
-  desired_capacity = var.desired_capacity
-  min_size = var.min_size
-  max_size = var.max_size
-  user_data = file("openproject.sh")
-  target_group_arn = module.alb.target_group_arn
+  cidr_block = var.vpc_cidr_block
 }
 
 module "alb" {
   source = "./modules/alb"
-  alb_name = var.alb_name
-  alb_security_group_ids = [module.sg.security_group_id]
-  public_subnet_ids = module.vpc.public_subnet_ids
   vpc_id = module.vpc.vpc_id
-  alb_port = var.alb_port
+  subnets = module.vpc.public_subnets
+}
+
+module "ec2" {
+  source = "./modules/ec2"
+  vpc_id = module.vpc.vpc_id
+  subnets = module.vpc.public_subnets
+  alb_target_group_arns = module.alb.target_group_arns
+  ami = var.ec2_ami
+  instance_type = var.ec2_instance_type
 }

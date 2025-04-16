@@ -3,12 +3,11 @@ terraform {
   backend "s3" {
     bucket         = "mockhackathon-uc02"
     key            = "terraform"
-    region         = "us-east-1"
-  #  dynamodb_table = "terraform-lock"
+    region         = "eu-north-1"
     encrypt        = true
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = "eu-north--1"
 }

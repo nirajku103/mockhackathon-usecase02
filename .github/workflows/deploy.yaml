@@ -38,41 +38,43 @@ jobs:
         run: |
           cd terraform
           terraform plan -var-file="dev.tfvars" -out=tfplan
-          terraform apply -var-file="dev.tfvars" --auto-approve
+          terraform destroy -var-file="dev.tfvars" --auto-approve
+          
+        # terraform apply -var-file="dev.tfvars" --auto-approve
 
-      - name: Save Terraform Plan File
-        run: |
-          cd terraform
-          terraform show -no-color tfplan > terraform-plan.md
-          rm -rf tfplan
-
-      # - name: Create or Switch to 'test' Branch
+      # - name: Save Terraform Plan File
       #   run: |
-      #     git config --global user.email "github-actions@example.com"
-      #     git config --global user.name "GitHub Actions"
-      #     git checkout test
-      #     git add terraform/terraform-plan.md
-      #     git commit -m "Add Terraform plan [skip ci]"
-      #     git push origin test --force
+      #     cd terraform
+      #     terraform show -no-color tfplan > terraform-plan.md
+      #     rm -rf tfplan
 
-      - name: Read Terraform Plan File
-        id: read_plan
-        run: |
-          PLAN_CONTENT=$(cat terraform/terraform-plan.md)
-          echo "plan_content<<EOF" >> $GITHUB_ENV
-          echo "$PLAN_CONTENT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+      # # - name: Create or Switch to 'test' Branch
+      # #   run: |
+      # #     git config --global user.email "github-actions@example.com"
+      # #     git config --global user.name "GitHub Actions"
+      # #     git checkout test
+      # #     git add terraform/terraform-plan.md
+      # #     git commit -m "Add Terraform plan [skip ci]"
+      # #     git push origin test --force
 
-      - name: Create Pull Request to main
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: test
-          base: main
-          title: "Terraform Plan Reviews"
-          body: |
-            ## Terraform Plan
-            The following changes are proposed by this Terraform plan:
-            ```diff
-            ${{ env.plan_content }}
-            ```
-          labels: terraform, plan
+      # - name: Read Terraform Plan File
+      #   id: read_plan
+      #   run: |
+      #     PLAN_CONTENT=$(cat terraform/terraform-plan.md)
+      #     echo "plan_content<<EOF" >> $GITHUB_ENV
+      #     echo "$PLAN_CONTENT" >> $GITHUB_ENV
+      #     echo "EOF" >> $GITHUB_ENV
+
+      # - name: Create Pull Request to main
+      #   uses: peter-evans/create-pull-request@v6
+      #   with:
+      #     branch: test
+      #     base: main
+      #     title: "Terraform Plan Reviews"
+      #     body: |
+      #       ## Terraform Plan
+      #       The following changes are proposed by this Terraform plan:
+      #       ```diff
+      #       ${{ env.plan_content }}
+      #       ```
+      #     labels: terraform, plan

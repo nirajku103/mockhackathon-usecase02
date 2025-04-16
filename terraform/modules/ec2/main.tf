@@ -40,7 +40,7 @@ resource "aws_security_group" "web_sg" {
 }
 
 resource "aws_lb_target_group_attachment" "openproject" {
-  target_group_arn  = var.alb_target_group_arn
+  target_group_arn  = var.alb_target_group_arn[0]
   target_id         = aws_instance.web[0].id
   port              = 8080
 }
